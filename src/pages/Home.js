@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Home.css';
 
-const API_BASE = 'http://127.0.0.1:8000';
+const API_BASE = 'https://guanews-backend.onrender.com';
 
 const tickerItems = [
   { flag: '🇯🇵', country: 'Japan', text: 'BOJ holds rates, yen weakens to 152' },

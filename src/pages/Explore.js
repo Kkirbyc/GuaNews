@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Explore.css';
 
-const API_BASE = 'http://127.0.0.1:8000';
+const API_BASE = 'https://guanews-backend.onrender.com';
 
 const topics = [
   { name: 'Politics', count: null, icon: '🌍', api: 'politics' },

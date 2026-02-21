@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Flash.css';
 
-const API_BASE = 'http://127.0.0.1:8000';
+const API_BASE = 'https://guanews-backend.onrender.com';
 
 const filters = ['All', '🌍 Politics', '💹 Finance', '💻 Tech', '🔬 Science', '🌿 Climate'];
 
