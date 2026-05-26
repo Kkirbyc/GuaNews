@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../config/api';
 import './Home.css';
-
-const API_BASE = 'https://guanews-backend.onrender.com';
 
 const tickerItems = [
   { flag: '🇯🇵', country: 'Japan', text: 'BOJ holds rates, yen weakens to 152' },
@@ -27,18 +26,7 @@ function timeAgo(dateStr) {
 }
 
 function NewsCard({ article, isHero = false }) {
-  const [svg, setSvg] = useState(null);
-
-  useEffect(() => {
-    const fetchSvg = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/illustration?title=${encodeURIComponent(article.title)}`);
-        const data = await res.json();
-        setSvg(data.svg);
-      } catch (err) {}
-    };
-    fetchSvg();
-  }, [article.title]);
+  const [svg] = useState(null);
 
   if (isHero) {
     return (
@@ -47,9 +35,9 @@ function NewsCard({ article, isHero = false }) {
           {svg ? (
             <div className="hero-svg" dangerouslySetInnerHTML={{ __html: svg }} />
           ) : (
-            <div className="svg-loading">
-              <div className="loading-spinner" />
-              <div className="art-label">Generating illustration...</div>
+            <div className="svg-placeholder">
+              <div className="art-icon">G</div>
+              <div className="art-label">Global Brief</div>
             </div>
           )}
         </div>
@@ -83,7 +71,9 @@ function NewsCard({ article, isHero = false }) {
         {svg ? (
           <div className="card-svg" dangerouslySetInnerHTML={{ __html: svg }} />
         ) : (
-          <div className="card-svg-loading"><div className="loading-spinner small" /></div>
+          <div className="card-svg-placeholder">
+            <div className="art-label">Brief</div>
+          </div>
         )}
       </div>
       <div className="card-cat">News</div>

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
+import { API_BASE } from '../config/api';
 import './Explore.css';
-
-const API_BASE = 'https://guanews-backend.onrender.com';
 
 const topics = [
   { name: 'Politics', count: null, icon: '🌍', api: 'politics' },
