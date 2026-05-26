@@ -1,21 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 import './Nav.css';
-
-export const LanguageContext = React.createContext({ lang: 'en', setLang: () => {} });
 
 function Nav() {
   const location = useLocation();
-  const [lang, setLang] = useState('en');
+  const { lang, setLang, languages } = useLanguage();
   const [showLangMenu, setShowLangMenu] = useState(false);
-
-  const languages = [
-    { code: 'en', label: 'EN', name: 'English' },
-    { code: 'zh', label: '中文', name: 'Chinese' },
-    { code: 'ja', label: '日本語', name: 'Japanese' },
-    { code: 'es', label: 'ES', name: 'Spanish' },
-    { code: 'fr', label: 'FR', name: 'French' },
-  ];
 
   const currentLang = languages.find(l => l.code === lang);
 
