@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../config/api';
+import { useLanguage } from '../context/LanguageContext';
 import './Flash.css';
 
 const filters = ['All', '🌍 Politics', '💹 Finance', '💻 Tech', '🔬 Science', '🌿 Climate'];
@@ -15,6 +16,7 @@ function timeAgo(dateStr) {
 }
 
 function Flash() {
+  const { lang } = useLanguage();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
@@ -23,19 +25,30 @@ function Flash() {
   });
 
   useEffect(() => {
+    let isActive = true;
+
     const fetchFlash = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/news?pageSize=20`);
+        const params = new URLSearchParams({ pageSize: '20', language: lang });
+        const res = await fetch(`${API_BASE}/news?${params}`);
         const data = await res.json();
-        setArticles(data.articles || []);
+        if (isActive) {
+          setArticles(data.articles || []);
+        }
       } catch (err) {
         console.error('Failed to fetch flash news:', err);
       }
-      setLoading(false);
+      if (isActive) {
+        setLoading(false);
+      }
     };
     fetchFlash();
-  }, []);
+
+    return () => {
+      isActive = false;
+    };
+  }, [lang]);
 
   const toggleNotif = (key) => {
     setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
