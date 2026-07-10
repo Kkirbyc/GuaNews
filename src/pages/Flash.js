@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { API_BASE } from '../config/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useLibrary } from '../context/LibraryContext';
+import { HeartIcon, ShareIcon } from '../components/Icons';
+import { shareArticle } from './Home';
 import './Flash.css';
 
 const filters = ['All', '🌍 Politics', '💹 Finance', '💻 Tech', '🔬 Science', '🌿 Climate'];
+const filterMap = {
+  '🌍 Politics': 'politics', '💹 Finance': 'business', '💻 Tech': 'technology',
+  '🔬 Science': 'science', '🌿 Climate': 'science',
+};
 
 function timeAgo(dateStr) {
   const now = new Date();
@@ -13,6 +21,27 @@ function timeAgo(dateStr) {
   if (diff < 60) return `${diff} min ago`;
   if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
   return `${Math.floor(diff / 1440)} days ago`;
+}
+
+function FlashActions({ article }) {
+  const { isSaved, toggleSave } = useLibrary();
+  const saved = isSaved(article.url);
+  const stop = (fn) => (e) => { e.preventDefault(); e.stopPropagation(); fn(); };
+  return (
+    <div className="flash-actions">
+      <button
+        className={`flash-act ${saved ? 'is-saved' : ''}`}
+        onClick={stop(() => toggleSave(article))}
+        aria-label={saved ? 'Remove from saved' : 'Save article'}
+        aria-pressed={saved}
+      >
+        <HeartIcon size={16} filled={saved} />
+      </button>
+      <button className="flash-act" onClick={stop(() => shareArticle(article))} aria-label="Share article">
+        <ShareIcon size={15} />
+      </button>
+    </div>
+  );
 }
 
 function Flash() {
@@ -31,6 +60,8 @@ function Flash() {
       setLoading(true);
       try {
         const params = new URLSearchParams({ pageSize: '20', language: lang });
+        const apiCategory = filterMap[activeFilter];
+        if (apiCategory) params.set('category', apiCategory);
         const res = await fetch(`${API_BASE}/news?${params}`);
         const data = await res.json();
         if (isActive) {
@@ -48,7 +79,7 @@ function Flash() {
     return () => {
       isActive = false;
     };
-  }, [lang]);
+  }, [lang, activeFilter]);
 
   const toggleNotif = (key) => {
     setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
@@ -88,6 +119,8 @@ function Flash() {
               <div className="live-dot" style={{ background: 'var(--green-muted)', width: 8, height: 8 }} />
               Loading latest updates...
             </div>
+          ) : displayed.length === 0 ? (
+            <div className="flash-empty">No updates in this category right now.</div>
           ) : (
             <div className="flash-feed">
               <div className="time-label">
@@ -96,11 +129,10 @@ function Flash() {
               </div>
 
               {displayed.map((item, i) => (
-                <a
+                <Link
                   key={i}
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
+                  to={`/article/${i}`}
+                  state={{ article: item }}
                   className={`flash-item ${i < 2 ? 'is-new' : ''}`}
                   style={{ textDecoration: 'none' }}
                 >
@@ -118,14 +150,10 @@ function Flash() {
                     <div className="flash-item-summary">{item.description}</div>
                     <div className="flash-item-footer">
                       <div className="flash-source">{item.source}</div>
-                      <div className="flash-actions">
-                        <button className="flash-act" onClick={e => e.preventDefault()}>♡</button>
-                        <button className="flash-act" onClick={e => e.preventDefault()}>＋</button>
-                        <button className="flash-act" onClick={e => e.preventDefault()}>↗</button>
-                      </div>
+                      <FlashActions article={item} />
                     </div>
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           )}
@@ -145,11 +173,13 @@ function Flash() {
             <div className="sidebar-title">Notify Me</div>
             {Object.entries(notifications).map(([key, val]) => (
               <div key={key} className="notify-item">
-                <span style={{ fontSize: '16px' }}>
-                  {key === 'Politics' ? '🌍' : key === 'Finance' ? '💹' : key === 'Tech' ? '💻' : key === 'Science' ? '🔬' : '🌿'}
-                </span>
                 <span className="notify-name">{key}</span>
-                <div className={`notify-toggle ${val ? '' : 'off'}`} onClick={() => toggleNotif(key)} />
+                <button
+                  className={`notify-toggle ${val ? '' : 'off'}`}
+                  onClick={() => toggleNotif(key)}
+                  aria-label={`Toggle ${key} notifications`}
+                  aria-pressed={val}
+                />
               </div>
             ))}
           </div>
@@ -157,13 +187,13 @@ function Flash() {
           <div className="sidebar-card">
             <div className="sidebar-title">Most Recent</div>
             {articles.slice(0, 3).map((item, i) => (
-              <a key={i} href={item.url} target="_blank" rel="noreferrer" className="most-read-item" style={{ textDecoration: 'none' }}>
+              <Link key={i} to={`/article/${i}`} state={{ article: item }} className="most-read-item" style={{ textDecoration: 'none' }}>
                 <span className="most-read-num">0{i + 1}</span>
                 <div>
                   <div className="most-read-title">{item.title}</div>
                   <div className="most-read-meta">{item.source} · {timeAgo(item.publishedAt)}</div>
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
 

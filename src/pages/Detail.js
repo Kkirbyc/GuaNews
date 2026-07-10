@@ -1,157 +1,186 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { articles } from '../data/articles';
+import React, { useState, useEffect } from 'react';
+import { useLocation, Link } from 'react-router-dom';
+import { API_BASE } from '../config/api';
+import { useLibrary } from '../context/LibraryContext';
+import { HeartIcon, ShareIcon, ArrowRightIcon } from '../components/Icons';
+import { shareArticle } from './Home';
 import './Detail.css';
 
+/* Strip anything executable before rendering model-generated SVG. */
+function sanitizeSvg(svg) {
+  if (!svg || !svg.trim().toLowerCase().startsWith('<svg')) return '';
+  return svg
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
 function Detail() {
-  const { id } = useParams();
-  const article = articles.find(a => a.id === parseInt(id)) || articles[0];
-  const [saved, setSaved] = useState(false);
+  const location = useLocation();
+  const article = location.state?.article;
+  const { isSaved, toggleSave } = useLibrary();
+
+  const [summary, setSummary] = useState({ status: 'loading', points: [] });
+  const [svg, setSvg] = useState({ status: 'loading', code: '' });
+
+  useEffect(() => {
+    if (!article) return;
+    let active = true;
+    setSummary({ status: 'loading', points: [] });
+    setSvg({ status: 'loading', code: '' });
+
+    (async () => {
+      try {
+        const params = new URLSearchParams({
+          title: article.title || '',
+          description: article.description || '',
+        });
+        const res = await fetch(`${API_BASE}/summarize?${params}`);
+        const data = await res.json();
+        if (active) {
+          setSummary({
+            status: data.points && data.points.length ? 'done' : 'error',
+            points: data.points || [],
+          });
+        }
+      } catch (err) {
+        if (active) setSummary({ status: 'error', points: [] });
+      }
+    })();
+
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/illustration?title=${encodeURIComponent(article.title || '')}`);
+        const data = await res.json();
+        const clean = sanitizeSvg(data.svg || '');
+        if (active) setSvg({ status: clean ? 'done' : 'error', code: clean });
+      } catch (err) {
+        if (active) setSvg({ status: 'error', code: '' });
+      }
+    })();
+
+    return () => { active = false; };
+  }, [article]);
+
+  if (!article) {
+    return (
+      <div className="detail fade-up">
+        <div className="detail-empty">
+          <h1>Article not available</h1>
+          <p>Open a story from the feed to read its AI brief.</p>
+          <Link to="/" className="original-btn">Back to Today</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const saved = isSaved(article.url);
+  const published = article.publishedAt
+    ? new Date(article.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
 
   return (
     <div className="detail fade-up">
-      <div className="detail-layout">
-        <article>
+      <div className="detail-wrap">
+        <div className="breadcrumb">
+          <Link to="/">Today</Link>
+          <span className="breadcrumb-sep">›</span>
+          <span>{article.source}</span>
+        </div>
 
-          <div className="breadcrumb">
-            <Link to="/">Today</Link>
-            <span className="breadcrumb-sep">›</span>
-            <span>{article.category}</span>
-            <span className="breadcrumb-sep">›</span>
-            <span>{article.title.substring(0, 40)}...</span>
-          </div>
+        {/* AI ILLUSTRATION */}
+        <div className="detail-illustration">
+          {svg.status === 'done' ? (
+            <div className="detail-svg" dangerouslySetInnerHTML={{ __html: svg.code }} />
+          ) : svg.status === 'loading' ? (
+            <div className="detail-svg-loading">
+              <div className="loading-spinner" />
+              <span>Illustrating…</span>
+            </div>
+          ) : (
+            <div className="detail-svg-fallback"><span>G</span></div>
+          )}
+        </div>
 
-          <div className="article-header">
-            <div className="article-category">{article.category}</div>
-            <h1 className="article-title">{article.title}</h1>
-            <div className="article-meta">
-              <div className="meta-source">
-                <span className="meta-flag">{article.sourceFlag}</span>
-                <div>
-                  <div className="meta-name">{article.source}</div>
-                  <div className="meta-info">February 17, 2026</div>
-                </div>
-              </div>
-              <span className="meta-dot">·</span>
-              <span className="meta-info">{article.readTime}</span>
-              <span className="meta-dot">·</span>
-              <span className="meta-info">Translated from English</span>
-              <div className="meta-actions">
-                <button
-                  className={`action-pill ${saved ? 'filled' : ''}`}
-                  onClick={() => setSaved(!saved)}
-                >
-                  {saved ? '♡ Saved' : '♡ Save'}
-                </button>
-                <button className="action-pill">↗ Share</button>
+        <div className="article-header">
+          <div className="article-category">Brief</div>
+          <h1 className="article-title">{article.title}</h1>
+          <div className="article-meta">
+            <div className="meta-source">
+              <div>
+                <div className="meta-name">{article.source}</div>
+                {published && <div className="meta-info">{published}</div>}
               </div>
             </div>
+            <div className="meta-actions">
+              <button
+                className={`action-pill ${saved ? 'filled' : ''}`}
+                onClick={() => toggleSave(article)}
+                aria-pressed={saved}
+              >
+                <HeartIcon size={15} filled={saved} /> {saved ? 'Saved' : 'Save'}
+              </button>
+              <button className="action-pill" onClick={() => shareArticle(article)}>
+                <ShareIcon size={15} /> Share
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="article-divider" />
+
+        {/* AI SUMMARY */}
+        <div className="summary-box">
+          <div className="summary-header">
+            <div className="summary-label">⚡ AI Summary — In 30 seconds</div>
+            <div className="ai-badge">AI Generated</div>
           </div>
 
-          <div className="article-divider" />
-
-          {/* AI SUMMARY */}
-          <div className="summary-box">
-            <div className="summary-header">
-              <div className="summary-label">⚡ AI Summary — In 30 seconds</div>
-              <div className="ai-badge">AI Generated</div>
-            </div>
+          {summary.status === 'loading' && (
             <div className="summary-points">
-              {article.points.map((point, i) => (
-                <div key={i} className="summary-point">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="summary-point summary-skeleton">
                   <span className="point-num">0{i + 1}</span>
-                  <span>{point}</span>
+                  <span className="skeleton-line" />
                 </div>
               ))}
             </div>
-          </div>
+          )}
 
-          {/* LANG SWITCHER */}
-          <div className="lang-switcher">
-            <span className="lang-switcher-label">Read in:</span>
-            {['English', '中文', '日本語', 'Español'].map(lang => (
-              <button key={lang} className={`lang-btn ${lang === 'English' ? 'active' : ''}`}>{lang}</button>
-            ))}
-            <button className="lang-btn">+ More</button>
-          </div>
-
-          {/* BODY */}
-          <div className="article-body">
-            {article.body.map((para, i) => (
-              <p key={i}>{para}</p>
-            ))}
-          </div>
-
-          {/* PERSPECTIVES */}
-          <div className="perspectives">
-            <div className="perspectives-header">
-              <div className="perspectives-title">🌐 How the world sees it</div>
-              <div className="perspectives-sub">{article.perspectives.length} sources · {article.perspectives.length} perspectives</div>
-            </div>
-            {article.perspectives.map((p, i) => (
-              <div key={i} className="perspective-item">
-                <span className="perspective-flag">{p.flag}</span>
-                <div className="perspective-body">
-                  <div className="perspective-source">
-                    {p.source}
-                    <span className={`stance-tag stance-${p.stanceColor}`}>{p.stance}</span>
-                  </div>
-                  <div className="perspective-text">{p.text}</div>
+          {summary.status === 'done' && (
+            <div className="summary-points">
+              {summary.points.map((point, i) => (
+                <div key={i} className="summary-point">
+                  <span className="point-num">0{i + 1}</span>
+                  <span>{point.replace(/^\d+[.)]\s*/, '')}</span>
                 </div>
-              </div>
-            ))}
-          </div>
-
-          {/* SOURCE LINK */}
-          <div className="source-link-box">
-            <div className="source-link-left">
-              <span style={{ fontSize: '24px' }}>{article.sourceFlag}</span>
-              <div>
-                <div className="source-link-text">Original source</div>
-                <div className="source-link-name">{article.source} — Full article in English</div>
-              </div>
+              ))}
             </div>
-            <a href="#top" className="original-btn">Read original ↗</a>
-          </div>
+          )}
 
-        </article>
+          {summary.status === 'error' && (
+            <div className="summary-error">Summary unavailable right now — read the full story below.</div>
+          )}
+        </div>
 
-        {/* SIDEBAR */}
-        <aside className="detail-sidebar">
+        {/* LEAD */}
+        <div className="article-body">
+          <p>{article.description}</p>
+        </div>
 
-          <div className="sidebar-section">
-            <div className="sidebar-title">Key Facts</div>
-            {article.facts.map((fact, i) => (
-              <div key={i} className="fact-item">
-                <div className="fact-bullet" />
-                {fact}
-              </div>
-            ))}
-          </div>
-
-          <div className="sidebar-section">
-            <div className="sidebar-title">Related Stories</div>
-            {article.related.map(r => (
-              <Link key={r.id} to={`/article/${r.id}`} className="related-item">
-                <div className="related-body">
-                  <div className="related-cat">{r.category}</div>
-                  <div className="related-title">{r.title}</div>
-                  <div className="related-meta">{r.source} · {r.readTime}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          <div className="sidebar-section">
-            <div className="sidebar-title">Source Transparency</div>
-            <div className="trust-text">
-              This story was sourced from <strong>{article.source}</strong>, cross-referenced with <strong>{article.perspectives.length} independent outlets</strong>, and translated by GuaNews AI.
+        {/* SOURCE LINK */}
+        <div className="source-link-box">
+          <div className="source-link-left">
+            <div>
+              <div className="source-link-text">Original source</div>
+              <div className="source-link-name">{article.source}</div>
             </div>
-            <div className="trust-badge">✓ No editorial bias detected</div>
           </div>
-
-        </aside>
-
+          <a href={article.url} target="_blank" rel="noreferrer" className="original-btn">
+            Read original <ArrowRightIcon size={15} />
+          </a>
+        </div>
       </div>
     </div>
   );

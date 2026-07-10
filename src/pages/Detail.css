@@ -332,6 +332,90 @@
 .related-item:last-child { border-bottom: none; padding-bottom: 0; }
 .related-item:hover { opacity: 0.7; }
 
+/* ------- Detail A (real backend-wired layout) ------- */
+.detail-wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 24px 90px;
+}
+
+.action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-illustration {
+  height: 240px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--green-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 32px;
+}
+.detail-svg { display: flex; }
+.detail-svg svg { width: 200px; height: 200px; }
+.detail-svg-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-faint);
+  font-size: 13px;
+}
+.detail-svg-fallback span {
+  font-family: 'Playfair Display', serif;
+  font-size: 60px;
+  color: var(--green-muted);
+  opacity: 0.32;
+}
+
+.summary-skeleton { align-items: center; }
+.skeleton-line {
+  display: block;
+  flex: 1;
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--border) 25%, var(--border-strong) 37%, var(--border) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+.summary-error { font-size: 14px; color: var(--ink-mid); line-height: 1.6; }
+
+.detail-empty {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 120px 24px;
+  text-align: center;
+}
+.detail-empty h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 26px;
+  margin-bottom: 12px;
+  color: var(--ink);
+}
+.detail-empty p { color: var(--ink-mid); margin-bottom: 24px; }
+
+.loading-spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--green-muted);
+  border-radius: 50%;
+  animation: detail-spin 0.8s linear infinite;
+}
+@keyframes detail-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  .detail-wrap { padding: 32px 16px 70px; }
+  .article-title { font-size: 26px; }
+}
+
 .related-cat { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
 .related-title { font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 600; line-height: 1.38; color: var(--ink); margin-bottom: 4px; }
 .related-meta { font-size: 11px; color: var(--ink-faint); }

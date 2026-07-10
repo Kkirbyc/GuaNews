@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { API_BASE } from '../config/api';
+import { useLanguage } from '../context/LanguageContext';
+import { useLibrary } from '../context/LibraryContext';
+import { useTilt } from '../hooks/useTilt';
+import { HeartIcon, ShareIcon, ArrowRightIcon } from '../components/Icons';
+import FeaturedDeck from '../components/FeaturedDeck';
 import './Home.css';
-
-const tickerItems = [
-  { flag: '🇯🇵', country: 'Japan', text: 'BOJ holds rates, yen weakens to 152' },
-  { flag: '🇧🇷', country: 'Brazil', text: 'Amazon hits reforestation milestone' },
-  { flag: '🇩🇪', country: 'Germany', text: 'Coalition talks enter final round' },
-  { flag: '🇮🇳', country: 'India', text: 'Rupee strengthens on record FDI inflows' },
-  { flag: '🇺🇦', country: 'Ukraine', text: 'Peace talks resume in Istanbul' },
-];
 
 const categories = ['All', '🌍 Politics', '💹 Finance', '🔬 Science', '⚽ Sports', '🎭 Culture', '💻 Tech', '🌿 Climate'];
 const categoryMap = {
@@ -20,26 +18,59 @@ function timeAgo(dateStr) {
   const now = new Date();
   const date = new Date(dateStr);
   const diff = Math.floor((now - date) / 1000 / 60);
+  if (diff < 1) return 'just now';
   if (diff < 60) return `${diff} min ago`;
   if (diff < 1440) return `${Math.floor(diff / 60)} hours ago`;
   return `${Math.floor(diff / 1440)} days ago`;
 }
 
-function NewsCard({ article, isHero = false }) {
-  const [svg] = useState(null);
+export async function shareArticle(article) {
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: article.title, url: article.url });
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(article.url);
+    }
+  } catch (err) {
+    // User dismissed the share sheet — nothing to do.
+  }
+}
+
+function CardActions({ article }) {
+  const { isSaved, toggleSave } = useLibrary();
+  const saved = isSaved(article.url);
+  const stop = (fn) => (e) => { e.preventDefault(); e.stopPropagation(); fn(); };
+  return (
+    <div className="card-actions">
+      <button
+        className={`act-btn ${saved ? 'is-saved' : ''}`}
+        onClick={stop(() => toggleSave(article))}
+        aria-label={saved ? 'Remove from saved' : 'Save article'}
+        aria-pressed={saved}
+      >
+        <HeartIcon size={17} filled={saved} />
+      </button>
+      <button className="act-btn" onClick={stop(() => shareArticle(article))} aria-label="Share article">
+        <ShareIcon size={16} />
+      </button>
+    </div>
+  );
+}
+
+function NewsCard({ article, id, isHero = false }) {
+  const tilt = useTilt(isHero ? 4 : 7);
+  const to = { pathname: `/article/${id}` };
+  const state = { article };
 
   if (isHero) {
     return (
-      <a href={article.url} target="_blank" rel="noreferrer" className="hero-card">
+      <Link to={to} state={state} className="hero-card tilt" {...tilt}>
         <div className="hero-art">
-          {svg ? (
-            <div className="hero-svg" dangerouslySetInnerHTML={{ __html: svg }} />
-          ) : (
-            <div className="svg-placeholder">
-              <div className="art-icon">G</div>
-              <div className="art-label">Global Brief</div>
-            </div>
-          )}
+          <div className="hero-glow" />
+          <div className="svg-placeholder">
+            <div className="art-icon">G</div>
+            <div className="art-label">Global Brief</div>
+          </div>
         </div>
         <div className="hero-content">
           <div>
@@ -58,72 +89,44 @@ function NewsCard({ article, isHero = false }) {
                 <div className="source-meta">{timeAgo(article.publishedAt)}</div>
               </div>
             </div>
-            <button className="read-btn">Read full story <span className="arr">→</span></button>
+            <span className="read-btn">Read full story <ArrowRightIcon size={15} /></span>
           </div>
         </div>
-      </a>
+      </Link>
     );
   }
 
   return (
-    <a href={article.url} target="_blank" rel="noreferrer" className="news-card">
-      <div className="card-svg-wrap">
-        {svg ? (
-          <div className="card-svg" dangerouslySetInnerHTML={{ __html: svg }} />
-        ) : (
-          <div className="card-svg-placeholder">
-            <div className="art-label">Brief</div>
-          </div>
-        )}
-      </div>
+    <Link to={to} state={state} className="news-card tilt" {...tilt}>
       <div className="card-cat">News</div>
       <div className="card-title">{article.title}</div>
       <div className="card-summary">{article.description}</div>
       <div className="card-footer">
         <div className="card-source">{article.source} · {timeAgo(article.publishedAt)}</div>
-        <div className="card-actions">
-          <button className="act-btn" onClick={e => e.preventDefault()}>♡</button>
-          <button className="act-btn" onClick={e => e.preventDefault()}>＋</button>
-        </div>
+        <CardActions article={article} />
       </div>
-    </a>
+    </Link>
   );
 }
 
 function Home() {
+  const { lang } = useLanguage();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
-  const [currentLang, setCurrentLang] = useState('en');
   const [translating, setTranslating] = useState(false);
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-  // Listen for language change from Nav
-  useEffect(() => {
-    const handleLangChange = () => {
-      const newLang = window.__guaLang || 'en';
-      setCurrentLang(newLang);
-    };
-    window.addEventListener('langchange', handleLangChange);
-    return () => window.removeEventListener('langchange', handleLangChange);
-  }, []);
-
-  const fetchNews = async (category, lang) => {
-    const isTranslated = lang && lang !== 'en';
+  const fetchNews = useCallback(async (category, currentLang) => {
+    const isTranslated = currentLang && currentLang !== 'en';
     isTranslated ? setTranslating(true) : setLoading(true);
     try {
       const apiCategory = categoryMap[category] || 'general';
-      let url;
-      if (isTranslated) {
-        url = category === 'All'
-          ? `${API_BASE}/news/translated?language=${lang}`
-          : `${API_BASE}/news/translated?language=${lang}&category=${apiCategory}`;
-      } else {
-        url = category === 'All'
-          ? `${API_BASE}/news`
-          : `${API_BASE}/news?category=${apiCategory}`;
-      }
-      const res = await fetch(url);
+      const params = new URLSearchParams();
+      if (isTranslated) params.set('language', currentLang);
+      if (category !== 'All') params.set('category', apiCategory);
+      const endpoint = isTranslated ? '/news/translated' : '/news';
+      const res = await fetch(`${API_BASE}${endpoint}?${params}`);
       const data = await res.json();
       setArticles(data.articles || []);
     } catch (err) {
@@ -131,37 +134,35 @@ function Home() {
     }
     setLoading(false);
     setTranslating(false);
-  };
+  }, []);
 
   useEffect(() => {
-    fetchNews(activeCategory, currentLang);
-  }, [activeCategory, currentLang]);
+    fetchNews(activeCategory, lang);
+  }, [activeCategory, lang, fetchNews]);
 
-  const hero = articles[0];
-  const sidebar = articles.slice(1, 4);
-  const grid = articles.slice(4, 10);
+  const grid = articles.slice(5, 11);
 
   return (
     <div className="home fade-up">
-      <div className="ticker-bar">
-        <div className="ticker-label"><div className="pulse-dot" />Flash</div>
-        <div className="ticker-track">
-          {[...tickerItems, ...tickerItems].map((item, i) => (
-            <div key={i} className="ticker-item">
-              {item.flag} <strong>{item.country}:</strong> {item.text}
-            </div>
-          ))}
-        </div>
-      </div>
-
       <div className="home-main">
-        <div className="date-row">
-          <div className="date-text">
-            {today}
-            <span className="edition-num">{currentLang !== 'en' ? '🌐 Translated' : 'Live'}</span>
+
+        {/* MASTHEAD */}
+        <header className="masthead">
+          <div className="masthead-top">
+            <span className="masthead-live"><span className="live-pip" /> Live · {today}</span>
+            <span className="masthead-badge">World Edition</span>
           </div>
-          <div className="stories-count">{articles.length} stories</div>
-        </div>
+          <h1 className="masthead-title">The Global <em>Brief</em></h1>
+          <div className="masthead-rule" />
+          <div className="masthead-foot">
+            <p className="masthead-sub">World news, distilled by AI — summarized, translated, and illustrated.</p>
+            <div className="masthead-chips">
+              <span className="mchip">AI summaries</span>
+              <span className="mchip">40+ languages</span>
+              <span className="mchip">{articles.length ? `${articles.length} live` : 'Live'}</span>
+            </div>
+          </div>
+        </header>
 
         {(loading || translating) && (
           <div className="loading-state">
@@ -170,19 +171,8 @@ function Home() {
           </div>
         )}
 
-        {!loading && !translating && hero && (
-          <div className="hero-layout">
-            <NewsCard article={hero} isHero={true} />
-            <div className="sidebar">
-              {sidebar.map((article, i) => (
-                <a key={i} href={article.url} target="_blank" rel="noreferrer" className="sidebar-card">
-                  <div className="sb-cat">News</div>
-                  <div className="sb-title">{article.title}</div>
-                  <div className="sb-meta">{article.source} · {timeAgo(article.publishedAt)}</div>
-                </a>
-              ))}
-            </div>
-          </div>
+        {!loading && !translating && articles.length > 0 && (
+          <FeaturedDeck articles={articles} />
         )}
 
         <div className="filter-row">
@@ -193,14 +183,14 @@ function Home() {
               </button>
             ))}
           </div>
-          <div className="filter-sort">Sorted by latest ↓</div>
+          <div className="filter-sort">Latest ↓</div>
         </div>
 
         {!loading && !translating && grid.length > 0 && (
           <>
             <div className="section-label">More stories</div>
             <div className="news-grid">
-              {grid.map((article, i) => <NewsCard key={i} article={article} />)}
+              {grid.map((article, i) => <NewsCard key={i} article={article} id={i + 4} />)}
             </div>
           </>
         )}

@@ -61,9 +61,13 @@
 }
 
 .lang-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: 'DM Mono', monospace;
   font-size: 11px;
   color: var(--ink-faint);
+  background: none;
   border: 1px solid var(--border-strong);
   padding: 5px 12px;
   border-radius: 100px;
@@ -74,6 +78,27 @@
 .lang-pill:hover {
   border-color: var(--green-muted);
   color: var(--green-muted);
+}
+
+/* Icon-only button (theme toggle) */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--ink-mid);
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 100px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.icon-btn:hover {
+  color: var(--green-muted);
+  border-color: var(--green-muted);
+  background: var(--green-tint);
 }
 
 .sign-in-btn {
@@ -119,3 +144,26 @@
 
 .lang-option:hover { background: var(--green-tint); }
 .lang-option.active { color: var(--green-muted); font-weight: 600; background: var(--green-tint); }
+
+/* Responsive: tighten the bar and let the center links scroll on small screens */
+@media (max-width: 900px) {
+  .nav { padding: 0 20px; }
+  .nav-center { gap: 22px; }
+}
+
+@media (max-width: 640px) {
+  .nav {
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    padding: 0 14px;
+  }
+  .nav-center {
+    gap: 18px;
+    overflow-x: auto;
+    justify-content: flex-start;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .nav-center::-webkit-scrollbar { display: none; }
+  .sign-in-btn { display: none; }
+}
