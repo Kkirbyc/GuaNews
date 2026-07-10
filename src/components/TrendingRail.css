@@ -1,0 +1,153 @@
+.trend {
+  margin: 8px 0 40px;
+}
+
+.trend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.trend-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+}
+.trend-hint {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ===== MARQUEE ===== */
+.marquee {
+  position: relative;
+  overflow-x: auto;            /* still hand-scrollable (and for reduced-motion) */
+  overflow-y: hidden;
+  margin-bottom: 14px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.marquee::-webkit-scrollbar { display: none; }
+
+/* edge fades so cards dissolve into the background */
+.marquee::before,
+.marquee::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 90px;
+  z-index: 2;
+  pointer-events: none;
+}
+.marquee::before { left: 0;  background: linear-gradient(90deg, var(--bg), transparent); }
+.marquee::after  { right: 0; background: linear-gradient(270deg, var(--bg), transparent); }
+
+.marquee-track {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  width: max-content;
+  will-change: transform;
+}
+.cat-track  { animation: marqueeX 34s linear infinite; }
+.news-track { animation: marqueeX 60s linear infinite reverse; }
+
+.marquee:hover .marquee-track { animation-play-state: paused; }
+
+@keyframes marqueeX {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* ===== CATEGORY CHIPS ===== */
+.trend-chip {
+  --tint: var(--green);
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+  padding: 10px 17px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.trend-chip svg { color: var(--tint); }
+:root[data-theme="dark"] .trend-chip,
+:root:not([data-theme="light"]) .trend-chip {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ===== HOT NEWS CARDS ===== */
+.trend-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  width: 360px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+:root[data-theme="dark"] .trend-card,
+:root:not([data-theme="light"]) .trend-card {
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.trend-card:hover {
+  border-color: var(--green-muted);
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px rgba(95, 227, 155, 0.18),
+              0 16px 40px rgba(0, 0, 0, 0.45),
+              0 0 34px rgba(95, 227, 155, 0.14);
+}
+
+.trend-rank {
+  font-family: 'Playfair Display', serif;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--green);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+.trend-card-body { min-width: 0; }
+.trend-card-src {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--green-muted);
+  margin-bottom: 6px;
+}
+.trend-card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.36;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .marquee::before, .marquee::after { width: 40px; }
+  .trend-card { width: 280px; }
+}
